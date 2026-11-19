@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,6 +57,43 @@ void main() {
 
   Future<bool> initialize() =>
       engine.initialize(onError: (_) {}, onStatus: (_) {});
+
+  Future<void> nativeCallback(String method, Object arguments) async {
+    final done = Completer<void>();
+    // Exercise the real plugin's filtering as well as QuestionListener's state.
+    messenger.handlePlatformMessage(
+      speechChannel.name,
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall(method, arguments),
+      ),
+      (_) => done.complete(),
+    );
+    await done.future;
+  }
+
+  test(
+    'native doneNoResult does not suppress a queued language error',
+    () async {
+      final listener = QuestionListener(
+        engine,
+        finalWait: const Duration(milliseconds: 50),
+      );
+      addTearDown(listener.dispose);
+      final heard = listener.listen();
+      await pumpEventQueue();
+      await nativeCallback('notifyStatus', 'doneNoResult');
+      await nativeCallback(
+        'notifyError',
+        jsonEncode({
+          'errorMsg': 'error_language_not_supported',
+          'permanent': true,
+        }),
+      );
+      await heard;
+      expect(listener.error, SpeechFailure.language.message);
+      expect(speechCalls.where((call) => call.method == 'stop'), isEmpty);
+    },
+  );
 
   test(
     'no offline service never requests permission or starts a recognizer',

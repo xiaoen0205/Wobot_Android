@@ -325,17 +325,25 @@ class QuestionListener extends ChangeNotifier {
 
   void _onStatus(int generation, String status) {
     if (generation != _generation || _ending) return;
-    if (status == SpeechToText.doneStatus) _end(generation, EndReason.engine);
+    if (status == SpeechToText.doneStatus) {
+      // The recognizer has stopped itself. Calling stop here marks this as a
+      // user stop in speech_to_text, which suppresses its queued native error.
+      _end(generation, EndReason.engine, stopEngine: false);
+    }
   }
 
   /// The one way a question ends: the first caller wins, later ones do nothing.
-  Future<void> _end(int generation, EndReason reason) async {
+  Future<void> _end(
+    int generation,
+    EndReason reason, {
+    bool stopEngine = true,
+  }) async {
     if (generation != _generation || _ending || !listening) return;
     _ending = true;
     _stopTimers();
     final endedAt = _now();
     final settled = _final ??= Completer<String>();
-    if (!settled.isCompleted) {
+    if (stopEngine && !settled.isCompleted) {
       try {
         await _engine.stop();
       } on Exception {

@@ -139,6 +139,10 @@ configuration. It cannot verify Google sign-in or the backend. Its APK has no AP
 URL. The upstream iOS camera channel is not opened on Android, and Robot lab shows
 face tracking as unavailable.
 
+On Windows, use `flutter test --concurrency=1` if the existing voice setup tests
+race while removing temporary files in parallel. CI runs the suite on Linux.
+App CI can also be started manually from the fork's Actions page.
+
 ## Text-chat acceptance
 
 Use your own test account and test conversations against the owner's service:

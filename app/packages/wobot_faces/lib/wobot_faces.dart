@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// A face in a picture, from 0 to 1 with the origin top left, as a selfie shows it:
@@ -67,6 +68,10 @@ abstract class FaceSource {
   /// are `camera_denied` and `no_camera` [PlatformException]s.
   Stream<FaceFrame> frames();
 }
+
+/// Only iOS has a native face detector in this workspace so far.
+FaceSource? phoneFaceSource() =>
+    defaultTargetPlatform == TargetPlatform.iOS ? PhoneFaceSource() : null;
 
 /// The phone's front camera, with faces found on the phone (iOS: Apple's Vision).
 class PhoneFaceSource implements FaceSource {

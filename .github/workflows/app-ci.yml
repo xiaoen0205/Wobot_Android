@@ -1,6 +1,11 @@
 name: App CI
 
 on:
+  push:
+    branches: [main, feat/android-chat]
+    paths:
+      - app/**
+      - .github/workflows/app-ci.yml
   pull_request:
     paths:
       - app/**
@@ -16,7 +21,7 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: app
@@ -31,33 +36,24 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Use the runner's JDK 17
+        run: echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
-      # Before the stand-in below, which is not formatted.
       - name: Check formatting
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: dart format --output=none --set-exit-if-changed lib test tool packages/wobot_faces/lib
 
-      # The Firebase config is generated per developer and never committed; the
-      # analyzer needs the file to exist, not real values.
+      # Fake values compile an APK but cannot authenticate or reach a backend.
       - name: Stand in for the Firebase config
-        run: |
-          cat > lib/firebase_options.dart <<'EOF'
-          import 'package:firebase_core/firebase_core.dart';
-
-          class DefaultFirebaseOptions {
-            static FirebaseOptions get currentPlatform => const FirebaseOptions(
-              apiKey: 'ci',
-              appId: 'ci',
-              messagingSenderId: 'ci',
-              projectId: 'ci',
-              iosClientId: 'ci',
-            );
-          }
-          EOF
+        run: dart run tool/prepare_ci.dart
 
       - name: Analyze
         run: flutter analyze
 
       - name: Test
         run: flutter test
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug

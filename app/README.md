@@ -104,6 +104,12 @@ How the app keeps to the API's rules:
 
 ## Setup
 
+For Android development on Windows against an existing Cloud Run backend, follow
+[Android development](../docs/android-development.md). The Android package is
+`com.xiaoen0205.wobot`; this fork's first milestone is Google sign-in and text chat.
+
+### iOS
+
 Requires Flutter, Xcode, the Firebase CLI, the FlutterFire CLI
 (`dart pub global activate flutterfire_cli`) and Ruby's `xcodeproj` gem
 (`gem install xcodeproj`), which FlutterFire uses to add the plist to the Xcode
@@ -155,8 +161,9 @@ flutter test
 ```
 
 `flutter analyze` needs the generated `lib/firebase_options.dart`. CI (`app-ci.yml`)
-writes a stand-in with placeholder values after checking formatting, then analyzes and
-tests; nothing in it reaches Firebase.
+writes stand-ins with `dart run tool/prepare_ci.dart` after checking formatting, then
+analyzes, tests and builds an Android debug APK. The placeholders cannot sign in, and
+the CI APK has no backend URL.
 
 ## Running on an iPhone
 

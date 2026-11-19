@@ -39,7 +39,7 @@ class _RobotLabPageState extends State<RobotLabPage> {
     centre: _director.model,
     look: LookModel(DateTime.now),
   );
-  late final FaceSource _faces = widget.faces ?? PhoneFaceSource();
+  late final FaceSource? _faces = widget.faces ?? phoneFaceSource();
   StreamSubscription<FaceFrame>? _watching;
   FaceFrame? _frame;
   String? _cameraError;
@@ -74,8 +74,9 @@ class _RobotLabPageState extends State<RobotLabPage> {
       _frame = null;
       _cameraError = null;
     });
-    if (!on) return;
-    _watching = _faces.frames().listen(
+    final source = _faces;
+    if (!on || source == null) return;
+    _watching = source.frames().listen(
       (frame) {
         _tracker.see(frame);
         final now = DateTime.now();
@@ -355,13 +356,18 @@ class _RobotLabPageState extends State<RobotLabPage> {
         contentPadding: EdgeInsets.zero,
         title: const Text('Watch the front camera'),
         value: _watching != null,
-        onChanged: _watch,
+        subtitle: _faces == null
+            ? const Text('Face tracking is not available on this platform yet.')
+            : null,
+        onChanged: _faces == null ? null : _watch,
       ),
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
         title: const Text('Turn the robot toward the face'),
         value: _aim,
-        onChanged: connected ? (on) => setState(() => _aim = on) : null,
+        onChanged: connected && _faces != null
+            ? (on) => setState(() => _aim = on)
+            : null,
       ),
       if (_cameraError case final error?)
         Text(

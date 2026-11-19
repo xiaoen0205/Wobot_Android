@@ -1,5 +1,10 @@
 # Wobot
 
+This fork adds Android support, starting with Google sign-in and text chat against
+the existing backend. See [Android development](docs/android-development.md) for the
+Windows setup and the configuration needed from the backend owner. Voice, avatars,
+Bluetooth and Android face tracking are later milestones.
+
 <img align="right" width="300" src="docs/images/wobot.jpg" alt="Wobot: a cartoon avatar on a phone, carried by a robot head">
 
 **Wobot is an AI spokesperson you can talk to. It answers from approved sources, shows

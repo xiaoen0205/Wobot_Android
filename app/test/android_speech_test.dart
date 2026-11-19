@@ -155,6 +155,23 @@ void main() {
     },
   );
 
+  testWidgets(
+    'missing language errors are not presented as microphone silence',
+    (tester) async {
+      final fake = FakeEngine();
+      await tester.pumpWidget(MaterialApp(home: VoiceLabPage(engine: fake)));
+      await tester.tap(find.byIcon(Icons.mic));
+      await tester.pump();
+      fake.onError('error_language_not_supported');
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+      expect(find.text(SpeechFailure.language.message), findsOneWidget);
+      expect(find.text('No speech detected. Try again.'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
   testWidgets('permission denial offers Android app settings and retry works', (
     tester,
   ) async {

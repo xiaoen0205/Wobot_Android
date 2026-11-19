@@ -245,8 +245,9 @@ recognition service. The app checks this before requesting access and again befo
 listening. The plugin otherwise permits a default-recognizer fallback; Wobot blocks
 that path to preserve local speech recognition. Text chat remains available on
 unsupported devices. A service can exist without a model for the selected language:
-download its offline model in the phone's speech-service settings, or try the other
-language. Device/OEM language support varies.
+download its offline model if offered in the phone's speech-service settings, or
+try another language or phone. Device/OEM language support varies; an available
+recognizer does not imply support for either lab language.
 
 Only microphone permission is requested for speech input; Bluetooth microphone
 support is disabled for this milestone. A denial shows **Open Settings**, which

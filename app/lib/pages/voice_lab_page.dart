@@ -242,7 +242,9 @@ class _VoiceLabPageState extends State<VoiceLabPage>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  _listener.words.isEmpty && last?.empty == true
+                  _listener.words.isEmpty &&
+                          last?.empty == true &&
+                          _listener.error == null
                       ? 'No speech detected. Try again.'
                       : _listener.words,
                   style: text.bodyLarge,

@@ -168,6 +168,56 @@ App CI can also be started manually from the fork's Actions page.
 
 ## Text-chat acceptance
 
+### Optional signed-in integration test
+
+The opt-in test in `app/integration_test/live_chat_test.dart` exercises the real
+Android app and backend. It uses the Firebase SDK's existing signed-in session;
+sign in manually in the normal app first, using the same package and debug key.
+It never automates Google authentication or exports an ID token.
+
+Add `LIVE_TEST_EMAIL` to the ignored `.local/android.json`, alongside `API_BASE_URL`:
+
+```json
+{
+  "API_BASE_URL": "<API URL>",
+  "LIVE_TEST_EMAIL": "<TEST_EMAIL>"
+}
+```
+
+From `app/`, run against the owner's configured backend and a signed-in device:
+
+```powershell
+.\tool\test_live_chat.ps1 -DeviceId <ANDROID_DEVICE_ID>
+```
+
+The Windows helper always preserves the installed app. The equivalent direct
+command, also suitable for other development platforms, is:
+
+```powershell
+flutter test integration_test/live_chat_test.dart -d <ANDROID_DEVICE_ID> `
+  --no-uninstall `
+  --dart-define-from-file=../.local/android.json `
+  --dart-define=RUN_LIVE_CHAT_TESTS=true --reporter expanded
+```
+
+This makes real model requests. It checks English and Chinese replies, a title,
+stopping after the first streamed text, the server's saved partial reply, retry
+without duplicating the turn, history reopening and deletion. It creates its own
+conversation, removes that conversation in cleanup, and leaves existing chats
+alone. Without `RUN_LIVE_CHAT_TESTS=true`, the test is skipped. Standard CI uses
+fake configuration and does not run this live test.
+
+Keep `--no-uninstall`: Flutter otherwise removes the test app after the run and
+clears its local sign-in state. The test replaces the native keyboard channel
+with Flutter's test input while entering text; check native keyboard behavior
+separately on a device.
+
+After the test, launch the normal app again with the run command above to replace
+the test runner build. A process restart and any native sign-in prompts still need
+their separate device checks.
+
+### Device checklist
+
 Use your own test account and test conversations against the owner's service:
 
 - Sign in, sign out, and cancel sign-in without getting stuck.

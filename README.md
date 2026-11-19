@@ -2,8 +2,9 @@
 
 This fork adds Android support, starting with Google sign-in and text chat against
 the existing backend. See [Android development](docs/android-development.md) for the
-Windows setup and the configuration needed from the backend owner. Voice, avatars,
-Bluetooth and Android face tracking are later milestones.
+Windows setup and the configuration needed from the backend owner. Android speech
+input uses on-device recognition with microphone permission and recovery guidance.
+Avatar/voice generation, Bluetooth and Android face tracking need separate validation.
 
 <img align="right" width="300" src="docs/images/wobot.jpg" alt="Wobot: a cartoon avatar on a phone, carried by a robot head">
 

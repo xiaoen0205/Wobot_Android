@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
+
+import 'speech_failure.dart';
 
 /// The phone's speech recognizer, so a test can stand in for it.
 abstract class SpeechEngine {
@@ -29,32 +32,67 @@ abstract class SpeechEngine {
 /// Apple's Speech framework on iOS, SpeechRecognizer on Android, recognizing on the
 /// phone: the audio never leaves it (DEC-092).
 class DeviceSpeechEngine implements SpeechEngine {
-  final _speech = SpeechToText();
+  DeviceSpeechEngine({SpeechToText? recognizer})
+    : _speech = recognizer ?? SpeechToText();
+
+  final SpeechToText _speech;
+  static const _device = MethodChannel('wobot/device');
+
+  bool get _android =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<void> _requireOnDevice() async {
+    if (_android &&
+        await _device.invokeMethod<bool>('isOnDeviceRecognitionAvailable') !=
+            true) {
+      throw SpeechFailure.unavailable;
+    }
+  }
 
   @override
   Future<bool> initialize({
     required void Function(String error) onError,
     required void Function(String status) onStatus,
-  }) => _speech.initialize(
-    onError: (SpeechRecognitionError e) => onError(e.errorMsg),
-    onStatus: onStatus,
-  );
+  }) async {
+    await _requireOnDevice();
+    // SpeechToText is a singleton and initializes natively only once. Refresh its
+    // Dart callbacks for each question, including after opening another page.
+    _speech.errorListener = (SpeechRecognitionError e) => onError(e.errorMsg);
+    _speech.statusListener = onStatus;
+    if (_android &&
+        _speech.isAvailable &&
+        await _device.invokeMethod<bool>('hasMicrophonePermission') != true) {
+      throw SpeechFailure.permission;
+    }
+    final ready = await _speech.initialize(
+      onError: _speech.errorListener,
+      onStatus: onStatus,
+      options: [SpeechToText.androidNoBluetooth],
+    );
+    if (!ready && _android) throw SpeechFailure.permission;
+    return ready;
+  }
 
   @override
   Future<void> listen({
     required String localeId,
     required void Function(String words, bool isFinal) onResult,
-  }) => _speech.listen(
-    onResult: (SpeechRecognitionResult r) =>
-        onResult(r.recognizedWords, r.finalResult),
-    listenOptions: SpeechListenOptions(
-      localeId: localeId,
-      onDevice: true,
-      partialResults: true,
-      listenMode: ListenMode.dictation,
-      cancelOnError: true,
-    ),
-  );
+  }) async {
+    // Recheck immediately before listen: the plugin otherwise falls back to a
+    // recognizer whose EXTRA_PREFER_OFFLINE is only a hint on Android.
+    await _requireOnDevice();
+    await _speech.listen(
+      onResult: (SpeechRecognitionResult r) =>
+          onResult(r.recognizedWords, r.finalResult),
+      listenOptions: SpeechListenOptions(
+        localeId: localeId,
+        onDevice: true,
+        partialResults: true,
+        listenMode: ListenMode.dictation,
+        cancelOnError: true,
+      ),
+    );
+  }
 
   @override
   Future<void> stop() => _speech.stop();
@@ -147,14 +185,13 @@ class QuestionListener extends ChangeNotifier {
   final Duration finalWait;
   final DateTime Function() _now;
 
-  bool? _ready;
-
   /// Why the recognizer could not start or failed, as it says.
   String? error;
 
   /// The words so far.
   String words = '';
   bool listening = false;
+  bool starting = false;
 
   int _generation = 0;
   bool _ending = false;
@@ -171,6 +208,7 @@ class QuestionListener extends ChangeNotifier {
   /// Listens for one question. Completes with what was heard, or null when listening
   /// was cancelled or could not start.
   Future<Heard?> listen({String localeId = 'zh-TW'}) async {
+    if (starting) return null;
     if (listening) await cancel();
     final generation = ++_generation;
     _ending = false;
@@ -180,13 +218,29 @@ class QuestionListener extends ChangeNotifier {
     _lastWordsAt = null;
     _final = null;
     final heard = _heard = Completer<Heard?>();
-    _ready ??= await _engine.initialize(
-      onError: (message) => _onError(generation, message),
-      onStatus: (status) => _onStatus(generation, status),
-    );
+    starting = true;
+    _notify();
+    bool ready;
+    try {
+      ready = await _engine.initialize(
+        onError: (message) => _onError(generation, message),
+        onStatus: (status) => _onStatus(generation, status),
+      );
+    } on Exception catch (e) {
+      if (generation != _generation) return null;
+      error = e is SpeechFailure
+          ? e.message
+          : 'Speech recognition could not start. Please try again.';
+      _notify();
+      return null;
+    } finally {
+      if (generation == _generation) {
+        starting = false;
+        _notify();
+      }
+    }
     if (generation != _generation) return null;
-    if (_ready != true) {
-      _ready = null; // asked again next time, after Settings may allow it
+    if (!ready) {
       error = 'Speech recognition is unavailable on this phone.';
       _notify();
       return null;
@@ -203,7 +257,9 @@ class QuestionListener extends ChangeNotifier {
       );
     } on Exception catch (e) {
       if (generation != _generation) return null;
-      error = '$e';
+      error = e is SpeechFailure
+          ? e.message
+          : 'Speech recognition could not start. Please try again.';
       await _end(generation, EndReason.engine);
     }
     return heard.future;
@@ -212,10 +268,20 @@ class QuestionListener extends ChangeNotifier {
   /// The speaker tapped to send what was said.
   Future<void> finish() => _end(_generation, EndReason.manual);
 
+  /// Clears the previous result when choosing a different recognition language.
+  void clear() {
+    if (listening || starting) return;
+    _generation++;
+    words = '';
+    error = null;
+    _notify();
+  }
+
   /// Throws the question away: nothing is sent (leaving, going to the background).
   Future<void> cancel() async {
     final heard = _heard;
     _generation++;
+    starting = false;
     _stopTimers();
     if (listening) {
       listening = false;
@@ -233,7 +299,7 @@ class QuestionListener extends ChangeNotifier {
     if (generation != _generation) return;
     if (_ending) {
       // Listening has stopped: this is the recognizer settling the text.
-      if (isFinal) _final?.complete(text);
+      if (isFinal && _final?.isCompleted == false) _final?.complete(text);
       return;
     }
     if (text != words) {
@@ -256,25 +322,37 @@ class QuestionListener extends ChangeNotifier {
   }
 
   void _onError(int generation, String message) {
-    if (generation != _generation || _ending) return;
+    if (generation != _generation || !listening) return;
+    // Android may report done before its queued error. Keep a definitive failure
+    // while the final result is settling, so it cannot look like simple silence.
     // No words matched: the same as hearing nothing.
-    if (message != 'error_no_match') error = message;
+    if (message != 'error_no_match' && message != 'error_speech_timeout') {
+      error = SpeechFailure.fromCode(message).message;
+    }
     _end(generation, EndReason.engine);
   }
 
   void _onStatus(int generation, String status) {
     if (generation != _generation || _ending) return;
-    if (status == SpeechToText.doneStatus) _end(generation, EndReason.engine);
+    if (status == SpeechToText.doneStatus) {
+      // The recognizer has stopped itself. Calling stop here marks this as a
+      // user stop in speech_to_text, which suppresses its queued native error.
+      _end(generation, EndReason.engine, stopEngine: false);
+    }
   }
 
   /// The one way a question ends: the first caller wins, later ones do nothing.
-  Future<void> _end(int generation, EndReason reason) async {
+  Future<void> _end(
+    int generation,
+    EndReason reason, {
+    bool stopEngine = true,
+  }) async {
     if (generation != _generation || _ending || !listening) return;
     _ending = true;
     _stopTimers();
     final endedAt = _now();
     final settled = _final ??= Completer<String>();
-    if (!settled.isCompleted) {
+    if (stopEngine && !settled.isCompleted) {
       try {
         await _engine.stop();
       } on Exception {

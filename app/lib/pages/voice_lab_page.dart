@@ -160,9 +160,15 @@ class _VoiceLabPageState extends State<VoiceLabPage>
                 ],
                 selected: {_locale},
                 showSelectedIcon: false,
-                onSelectionChanged: listening
+                onSelectionChanged: listening || _listener.starting
                     ? null
-                    : (chosen) => setState(() => _locale = chosen.single),
+                    : (chosen) {
+                        _listener.clear();
+                        setState(() {
+                          _locale = chosen.single;
+                          _last = null;
+                        });
+                      },
               ),
               const SizedBox(height: 8),
               SwitchListTile(
@@ -218,14 +224,18 @@ class _VoiceLabPageState extends State<VoiceLabPage>
                           ? WobotColors.danger
                           : WobotColors.accent,
                     ),
-                    onPressed: _tap,
+                    onPressed: _listener.starting ? null : _tap,
                     child: Icon(listening ? Icons.stop : Icons.mic, size: 36),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                listening ? 'Listening… tap to send' : 'Tap to speak',
+                _listener.starting
+                    ? 'Preparing microphone…'
+                    : listening
+                    ? 'Listening… tap to send'
+                    : 'Tap to speak',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: WobotColors.faint),
               ),
@@ -238,13 +248,16 @@ class _VoiceLabPageState extends State<VoiceLabPage>
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  _listener.words.isEmpty && last?.empty == true
+                  _listener.words.isEmpty &&
+                          last?.empty == true &&
+                          _listener.error == null
                       ? 'No speech detected. Try again.'
                       : _listener.words,
                   style: text.bodyLarge,
                 ),
               ),
-              if (_listener.error case final error?) ErrorNote(error),
+              if (_listener.error case final error?)
+                SpeechErrorNote(error, localeId: _locale),
               if (last != null) ...[
                 const SizedBox(height: 12),
                 _Facts([

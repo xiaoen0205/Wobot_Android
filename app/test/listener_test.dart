@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wobot/voice/cer.dart';
 import 'package:wobot/voice/listener.dart';
+import 'package:wobot/voice/speech_failure.dart';
 
 import 'fake_speech.dart';
 
@@ -135,6 +138,76 @@ void main() {
     expect(await listener.listen(), isNull);
     expect(listener.error, contains('unavailable'));
   });
+
+  test('permission denied can be retried after Settings', () async {
+    engine.initializationError = SpeechFailure.permission;
+    expect(await listener.listen(), isNull);
+    expect(listener.error, SpeechFailure.permission.message);
+    expect(listener.starting, isFalse);
+    engine.initializationError = null;
+    final heard = listener.listen();
+    await pumpEventQueue();
+    engine.say('Allowed now', isFinal: true);
+    expect((await heard)!.text, 'Allowed now');
+    expect(listener.error, isNull);
+  });
+
+  test(
+    'second question receives errors, while old callbacks are ignored',
+    () async {
+      final first = listener.listen();
+      await pumpEventQueue();
+      final staleError = engine.onError;
+      final staleStatus = engine.onStatus;
+      engine.say('First', isFinal: true);
+      await first;
+      final second = listener.listen();
+      await pumpEventQueue();
+      staleError('error_permission');
+      staleStatus('done');
+      expect(listener.error, isNull);
+      expect(listener.listening, isTrue);
+      engine.onError('error_permission');
+      await second;
+      expect(listener.error, SpeechFailure.permission.message);
+      expect(listener.listening, isFalse);
+    },
+  );
+
+  test(
+    'cancelling while permission is pending never starts recording',
+    () async {
+      engine.initialization = Completer<bool>();
+      final pending = listener.listen();
+      expect(listener.starting, isTrue);
+      expect(await listener.listen(), isNull);
+      await listener.cancel();
+      engine.initialization!.complete(true);
+      expect(await pending, isNull);
+      expect(engine.onResult, isNull);
+      expect(listener.listening, isFalse);
+    },
+  );
+
+  test('missing language model reports a useful action', () async {
+    final heard = listener.listen();
+    await pumpEventQueue();
+    engine.onError('error_language_unavailable');
+    await heard;
+    expect(listener.error, SpeechFailure.language.message);
+  });
+
+  test(
+    'Android done before language error still reports the missing model',
+    () async {
+      final heard = listener.listen();
+      await pumpEventQueue();
+      engine.onStatus('done');
+      engine.onError('error_language_unavailable');
+      await heard;
+      expect(listener.error, SpeechFailure.language.message);
+    },
+  );
 
   group('CER', () {
     test('counts edits per character said', () {

@@ -7,6 +7,8 @@ import 'package:wobot/voice/speech_queue.dart';
 /// A recognizer the test speaks through.
 class FakeEngine implements SpeechEngine {
   bool available = true;
+  Exception? initializationError;
+  Completer<bool>? initialization;
   void Function(String words, bool isFinal)? onResult;
   late void Function(String error) onError;
   late void Function(String status) onStatus;
@@ -23,7 +25,8 @@ class FakeEngine implements SpeechEngine {
   }) async {
     this.onError = onError;
     this.onStatus = onStatus;
-    return available;
+    if (initializationError case final error?) throw error;
+    return initialization == null ? available : await initialization!.future;
   }
 
   @override

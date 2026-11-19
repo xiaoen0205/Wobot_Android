@@ -233,6 +233,56 @@ An HTTP 401 usually means token/project validation failed; a 403 with
 `ACCOUNT_NOT_ALLOWED` means the verified email is not allowed. Check the Firebase
 project, package name, signing SHA and web OAuth client if Google sign-in fails.
 
-Voice, avatar generation, Bluetooth, Android face tracking, release signing and
+### Speech input and microphone permission
+
+In a debug build, open **Settings > Developer > Voice lab**. Select `zh-TW` or
+`en-US`, tap the microphone, and allow microphone access when Android asks. Speech
+input also uses the same engine in Avatar mode; the lab needs no avatar or voice
+generation and sends no recognized text to the backend.
+
+Android speech input requires Android 12 or newer and an available on-device
+recognition service. The app checks this before requesting access and again before
+listening. The plugin otherwise permits a default-recognizer fallback; Wobot blocks
+that path to preserve local speech recognition. Text chat remains available on
+unsupported devices. A service can exist without a model for the selected language:
+download its offline model if offered in the phone's speech-service settings, or
+try another language or phone. Device/OEM language support varies; an available
+recognizer does not imply support for either lab language.
+
+An unsupported language and a missing model have separate messages. On Android 13
+or newer, a missing model offers **Download offline model** in Voice lab and Avatar
+mode. It requests the selected language from the on-device service; Android 14+
+reports readiness, scheduling or failure when the service supports download events.
+A scheduled/requested download is not reported as ready. Keep the device online
+and retry after completion. The service may require its own download confirmation;
+this flow records no speech and has no cloud-recognition fallback.
+
+Only microphone permission is requested for speech input; Bluetooth microphone
+support is disabled for this milestone. A denial shows **Open Settings**, which
+opens Wobot's Android app settings. Allow microphone access, return to the app, and
+tap again. No microphone request occurs at sign-in or during text chat. Recording
+stops when the app is hidden. Recognition errors never submit partial questions in
+Avatar mode.
+
+Run the read-only native capability smoke test on a connected Android device:
+
+```powershell
+flutter test integration_test/android_voice_test.dart -d <ANDROID_DEVICE_ID> `
+  --no-uninstall --dart-define-from-file=../.local/android.json
+```
+
+This checks native channels and, on unsupported devices, the real lab's guidance
+without granting permission or recording audio. Reinstall the normal debug APK
+afterward with `adb install -r` to preserve sign-in.
+
+The following still require a person on a suitable physical Android phone:
+
+- Deny microphone permission; verify **Open Settings**, allow access, then retry.
+- Speak two consecutive questions in both supported languages and check their text.
+- Stop manually, wait for silence, and leave the app while listening.
+- With downloaded models, repeat in airplane mode to verify offline recognition.
+- Disable system microphone access and check the error/recovery message.
+
+Avatar generation, Bluetooth, Android face tracking, release signing and
 Play distribution are later milestones. The release build no longer falls back to
 the debug signing key. iOS changes require a separate macOS/Xcode verification.

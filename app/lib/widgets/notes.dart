@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme.dart';
+import '../voice/speech_failure.dart';
+import 'speech_model_download.dart';
 
 /// A boxed remark under a step: what happens to a photo or a recording.
 class InfoNote extends StatelessWidget {
@@ -93,8 +97,7 @@ class ErrorNote extends StatelessWidget {
   }
 }
 
-/// iOS asks for the microphone or the camera once; after a refusal only Settings can
-/// allow it.
+/// Opens this app's permissions after the microphone or camera was refused.
 class PermissionNote extends StatelessWidget {
   const PermissionNote(this.what, {super.key});
 
@@ -106,9 +109,54 @@ class PermissionNote extends StatelessWidget {
       'Wobot may not use the $what. Allow it in Settings, then try again.',
       action: TextButton(
         style: TextButton.styleFrom(padding: EdgeInsets.zero),
-        onPressed: () => launchUrl(Uri.parse('app-settings:')),
+        onPressed: () async {
+          try {
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+              await const MethodChannel(
+                'wobot/device',
+              ).invokeMethod<void>('openAppSettings');
+            } else {
+              if (!await launchUrl(Uri.parse('app-settings:'))) {
+                throw Exception('Settings unavailable');
+              }
+            }
+          } on Exception {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Open the phone’s Settings and select Wobot to change permissions.',
+                  ),
+                ),
+              );
+            }
+          }
+        },
         child: const Text('Open Settings'),
       ),
     );
   }
+}
+
+/// Permission failures need an app-settings shortcut; other errors explain retry.
+class SpeechErrorNote extends StatelessWidget {
+  const SpeechErrorNote(this.message, {super.key, this.localeId});
+
+  final String message;
+  final String? localeId;
+
+  @override
+  Widget build(BuildContext context) =>
+      message == SpeechFailure.permission.message
+      ? const PermissionNote('microphone')
+      : ErrorNote(
+          message,
+          action:
+              message == SpeechFailure.language.message &&
+                  localeId != null &&
+                  !kIsWeb &&
+                  defaultTargetPlatform == TargetPlatform.android
+              ? SpeechModelDownload(localeId!, key: ValueKey(localeId))
+              : null,
+        );
 }

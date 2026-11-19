@@ -203,7 +203,7 @@ void main() {
       final heard = listener.listen();
       await pumpEventQueue();
       engine.onStatus('done');
-      engine.onError('error_language_not_supported');
+      engine.onError('error_language_unavailable');
       await heard;
       expect(listener.error, SpeechFailure.language.message);
     },

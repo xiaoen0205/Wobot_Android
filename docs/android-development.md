@@ -249,6 +249,14 @@ download its offline model if offered in the phone's speech-service settings, or
 try another language or phone. Device/OEM language support varies; an available
 recognizer does not imply support for either lab language.
 
+An unsupported language and a missing model have separate messages. On Android 13
+or newer, a missing model offers **Download offline model** in Voice lab and Avatar
+mode. It requests the selected language from the on-device service; Android 14+
+reports readiness, scheduling or failure when the service supports download events.
+A scheduled/requested download is not reported as ready. Keep the device online
+and retry after completion. The service may require its own download confirmation;
+this flow records no speech and has no cloud-recognition fallback.
+
 Only microphone permission is requested for speech input; Bluetooth microphone
 support is disabled for this milestone. A denial shows **Open Settings**, which
 opens Wobot's Android app settings. Allow microphone access, return to the app, and

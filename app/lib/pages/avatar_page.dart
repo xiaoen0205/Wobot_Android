@@ -312,7 +312,7 @@ class _Status extends StatelessWidget {
     ).textTheme.bodyLarge?.copyWith(color: WobotColors.muted);
     final error = session.error;
     if (error != null) {
-      return SpeechErrorNote(error);
+      return SpeechErrorNote(error, localeId: session.speechLocale);
     }
     final text = switch (session.state) {
       AvatarState.listening =>

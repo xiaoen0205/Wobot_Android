@@ -85,7 +85,7 @@ void main() {
       await nativeCallback(
         'notifyError',
         jsonEncode({
-          'errorMsg': 'error_language_not_supported',
+          'errorMsg': 'error_language_unavailable',
           'permanent': true,
         }),
       );
@@ -162,7 +162,7 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: VoiceLabPage(engine: fake)));
       await tester.tap(find.byIcon(Icons.mic));
       await tester.pump();
-      fake.onError('error_language_not_supported');
+      fake.onError('error_language_unavailable');
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
       expect(find.text(SpeechFailure.language.message), findsOneWidget);

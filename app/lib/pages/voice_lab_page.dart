@@ -160,9 +160,15 @@ class _VoiceLabPageState extends State<VoiceLabPage>
                 ],
                 selected: {_locale},
                 showSelectedIcon: false,
-                onSelectionChanged: listening
+                onSelectionChanged: listening || _listener.starting
                     ? null
-                    : (chosen) => setState(() => _locale = chosen.single),
+                    : (chosen) {
+                        _listener.clear();
+                        setState(() {
+                          _locale = chosen.single;
+                          _last = null;
+                        });
+                      },
               ),
               const SizedBox(height: 8),
               SwitchListTile(
@@ -250,7 +256,8 @@ class _VoiceLabPageState extends State<VoiceLabPage>
                   style: text.bodyLarge,
                 ),
               ),
-              if (_listener.error case final error?) SpeechErrorNote(error),
+              if (_listener.error case final error?)
+                SpeechErrorNote(error, localeId: _locale),
               if (last != null) ...[
                 const SizedBox(height: 12),
                 _Facts([

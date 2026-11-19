@@ -12,14 +12,18 @@ class SpeechFailure implements Exception {
     'phone with an on-device speech service. You can still use text chat.',
   );
   static const language = SpeechFailure(
-    'Offline recognition is unavailable for this language. Try another language '
-    'or phone. If your speech service offers an offline model for this language, '
-    'download it in the phone’s speech service settings.',
+    'The offline speech model for this language is not downloaded. '
+    'Download it, then try the microphone again.',
+  );
+  static const unsupportedLanguage = SpeechFailure(
+    'This phone’s on-device speech service does not support this language. '
+    'Try another language or phone. Text chat is still available.',
   );
 
   static SpeechFailure fromCode(String code) => switch (code) {
     'error_permission' || 'error_permission_denied' => permission,
-    'error_language_not_supported' || 'error_language_unavailable' => language,
+    'error_language_not_supported' => unsupportedLanguage,
+    'error_language_unavailable' => language,
     'error_busy' => const SpeechFailure(
       'Speech recognition is busy. Close other microphone apps and try again.',
     ),

@@ -268,6 +268,15 @@ class QuestionListener extends ChangeNotifier {
   /// The speaker tapped to send what was said.
   Future<void> finish() => _end(_generation, EndReason.manual);
 
+  /// Clears the previous result when choosing a different recognition language.
+  void clear() {
+    if (listening || starting) return;
+    _generation++;
+    words = '';
+    error = null;
+    _notify();
+  }
+
   /// Throws the question away: nothing is sent (leaving, going to the background).
   Future<void> cancel() async {
     final heard = _heard;

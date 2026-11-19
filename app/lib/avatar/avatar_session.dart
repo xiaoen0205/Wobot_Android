@@ -91,6 +91,10 @@ class AvatarSession extends ChangeNotifier {
   /// The words heard so far, while listening.
   String get words => _listener.words;
 
+  /// The language used for the last microphone attempt, including its recovery.
+  String? get speechLocale => _speechLocale;
+  String? _speechLocale;
+
   /// A list reply has more to read, and the user may ask for it.
   bool get canReadOn => _last?.next != null && state == AvatarState.idle;
 
@@ -109,7 +113,10 @@ class AvatarSession extends ChangeNotifier {
     final generation = _generation;
     _set(AvatarState.listening, 'neutral');
     robot?.listening();
-    final heard = await _listener.listen(localeId: await _locale());
+    final locale = await _locale();
+    if (generation != _generation) return;
+    _speechLocale = locale;
+    final heard = await _listener.listen(localeId: locale);
     if (generation != _generation) return;
     if (heard == null || _listener.error != null) {
       return _idle(error: _listener.error);

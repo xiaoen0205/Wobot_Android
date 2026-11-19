@@ -313,7 +313,9 @@ class QuestionListener extends ChangeNotifier {
   }
 
   void _onError(int generation, String message) {
-    if (generation != _generation || _ending) return;
+    if (generation != _generation || !listening) return;
+    // Android may report done before its queued error. Keep a definitive failure
+    // while the final result is settling, so it cannot look like simple silence.
     // No words matched: the same as hearing nothing.
     if (message != 'error_no_match' && message != 'error_speech_timeout') {
       error = SpeechFailure.fromCode(message).message;

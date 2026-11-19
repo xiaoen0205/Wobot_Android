@@ -197,6 +197,18 @@ void main() {
     expect(listener.error, SpeechFailure.language.message);
   });
 
+  test(
+    'Android done before language error still reports the missing model',
+    () async {
+      final heard = listener.listen();
+      await pumpEventQueue();
+      engine.onStatus('done');
+      engine.onError('error_language_not_supported');
+      await heard;
+      expect(listener.error, SpeechFailure.language.message);
+    },
+  );
+
   group('CER', () {
     test('counts edits per character said', () {
       expect(cer('徐業良教授', '許業良教授'), closeTo(0.2, 1e-9));

@@ -12,8 +12,9 @@ class SpeechFailure implements Exception {
     'phone with an on-device speech service. You can still use text chat.',
   );
   static const language = SpeechFailure(
-    'Offline recognition is unavailable for this language. Download its offline '
-    'speech model in your phone’s speech service settings, or try another language.',
+    'Offline recognition is unavailable for this language. Try another language '
+    'or phone. If your speech service offers an offline model for this language, '
+    'download it in the phone’s speech service settings.',
   );
 
   static SpeechFailure fromCode(String code) => switch (code) {

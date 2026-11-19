@@ -111,7 +111,9 @@ class AvatarSession extends ChangeNotifier {
     robot?.listening();
     final heard = await _listener.listen(localeId: await _locale());
     if (generation != _generation) return;
-    if (heard == null) return _idle(error: _listener.error);
+    if (heard == null || _listener.error != null) {
+      return _idle(error: _listener.error);
+    }
     if (heard.empty) return _idle(error: 'No speech detected. Try again.');
     await _ask(heard.text, generation);
   }

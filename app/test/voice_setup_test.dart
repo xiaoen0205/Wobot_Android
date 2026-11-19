@@ -93,7 +93,13 @@ void main() {
 
   tearDown(() async {
     voice.dispose();
-    await temporary.delete(recursive: true);
+    try {
+      await temporary.delete(recursive: true);
+    } on PathNotFoundException {
+      // dispose also deletes sample/preview files asynchronously. Windows can
+      // enumerate one just before dispose removes it; finish removing the tree.
+      if (await temporary.exists()) await temporary.delete(recursive: true);
+    }
   });
 
   Future<void> record(Duration length) async {

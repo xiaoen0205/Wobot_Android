@@ -104,6 +104,20 @@ void main() {
 
   tearDown(() => session.dispose());
 
+  test(
+    'a speech failure never sends a partially recognized question',
+    () async {
+      final done = session.talk();
+      await pumpEventQueue();
+      engine.say('Incomplete question');
+      engine.onError('error_permission');
+      await done;
+      expect(session.state, AvatarState.idle);
+      expect(session.error, contains('Microphone'));
+      expect(chat.turns, isEmpty);
+    },
+  );
+
   /// Taps the button and says the words; the question ends at the pause after them.
   Future<void> ask(String words) async {
     final done = session.talk();

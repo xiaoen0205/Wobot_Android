@@ -11,6 +11,7 @@ import '../robot/robot.dart';
 import '../theme.dart';
 import '../widgets/linked_text.dart';
 import '../widgets/thinking.dart';
+import '../widgets/notes.dart';
 
 /// Avatar mode (spec 22): the avatar alone on the screen, speaking its replies in the
 /// account's voice. A tap shows the controls, which hide again after a few seconds;
@@ -311,11 +312,7 @@ class _Status extends StatelessWidget {
     ).textTheme.bodyLarge?.copyWith(color: WobotColors.muted);
     final error = session.error;
     if (error != null) {
-      return Text(
-        error,
-        textAlign: TextAlign.center,
-        style: style?.copyWith(color: WobotColors.danger),
-      );
+      return SpeechErrorNote(error);
     }
     final text = switch (session.state) {
       AvatarState.listening =>

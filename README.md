@@ -123,4 +123,4 @@ waits for a person to approve it. Old versions are kept, so Wobot can go back to
 | [`infra/`](infra/README.md) | Google Cloud setup guide |
 | [`firmware/`](firmware/README.md) | Robot head firmware |
 
-A merge to `main` runs the tests and deploys the system.
+A merge to `main` runs the tests. This Android fork does not deploy the backend.

@@ -25,6 +25,17 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Keep this fork's Firebase OAuth identity separate from older apps
+            // signed with the machine-wide debug key. CI uses the default key.
+            val localKeystore = rootProject.file("../../.local/android-debug.keystore")
+            if (localKeystore.exists()) {
+                storeFile = localKeystore
+            }
+        }
+    }
+
     buildTypes {
         release {
             // Configure an upload keystore before building a distributable release.

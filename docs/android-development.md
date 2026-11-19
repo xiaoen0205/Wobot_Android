@@ -52,16 +52,39 @@ The API accepts this project's Firebase ID tokens, not tokens from an unrelated
 Firebase project. `/health` is public and proves only that the service is alive;
 it does not prove authentication or chat access.
 
-Get the development fingerprints without sharing the keystore itself:
+Use a dedicated debug key for this checkout when the machine-wide default key
+was already registered with the same package in a different Firebase project.
+Google requires each package and SHA-1 pair to be unique across projects; using
+another signing key avoids deleting the older project's OAuth client.
+
+From the repository root, create the key once (never overwrite an existing key):
+
+```powershell
+New-Item -ItemType Directory -Path .local -Force
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair `
+  -keystore .local/android-debug.keystore -storepass android -keypass android `
+  -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 `
+  -dname "CN=Android Debug,O=Android,C=TW"
+```
+
+Gradle automatically uses this file for debug signing when present; otherwise it
+uses the machine-wide default debug key. CI uses that default key with fake Firebase
+configuration. The `android` password is the standard debug-only password; this
+keystore must never be used for a published release.
+
+From the repository root, get its fingerprints without sharing the key itself:
 
 ```powershell
 & "$env:JAVA_HOME\bin\keytool.exe" -list -v -alias androiddebugkey `
-  -keystore "$env:USERPROFILE\.android\debug.keystore" `
+  -keystore .local/android-debug.keystore `
   -storepass android -keypass android
 ```
 
 If `JAVA_HOME` is unset, use the full path to Android Studio's `jbr/bin/keytool.exe`.
-A debug build creates the default debug keystore if it does not exist yet.
+Back up the dedicated key securely so Firebase registration remains stable across
+development sessions. If you change keys, the owner must register the new SHA.
+A build signed with a different key cannot update an installed build of the same
+package: use a fresh emulator or remove only your disposable smoke-test install.
 
 ## Configure Firebase
 

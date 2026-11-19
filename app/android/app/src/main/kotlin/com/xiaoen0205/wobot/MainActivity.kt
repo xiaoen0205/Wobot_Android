@@ -1,4 +1,4 @@
-package com.kaiweichang.wobot
+package com.xiaoen0205.wobot
 
 import io.flutter.embedding.android.FlutterActivity
 

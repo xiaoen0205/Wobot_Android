@@ -39,4 +39,8 @@ app/lib/firebase_options.dart
 app/ios/Runner/GoogleService-Info.plist
 app/ios/Flutter/Firebase.xcconfig
 app/android/app/google-services.json
+app/android/**/google-services.json
 app/firebase.json
+
+# Per-developer backend details and configuration handoff files
+.local/

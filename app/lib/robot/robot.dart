@@ -30,7 +30,7 @@ class Robot {
   /// The phone's own Bluetooth, the robot it remembers, and its front camera.
   factory Robot.onPhone() => Robot(
     RobotLink(UniversalBleTransport(), PhoneRobotMemory()),
-    faces: PhoneFaceSource(),
+    faces: phoneFaceSource(),
   );
 
   final RobotLink link;
